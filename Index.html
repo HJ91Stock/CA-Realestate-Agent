@@ -1,0 +1,1069 @@
+<!DOCTYPE html>
+
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CA Real Estate Intelligence · 加州房地产实时信息Agent</title>
+<style>
+  /* Load fonts gracefully - fallback to system fonts if blocked */
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&family=Noto+Sans+SC:wght@300;400;500;700&display=swap');
+</style>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 100%; height: 100%; overflow: hidden; background: #060a0e; }
+
+:root {
+–cat-color: #00ff88;
+–bg: #060a0e;
+–surface: #0a0e14;
+–border: #111820;
+–border2: #1a2030;
+–text: #e0e0e0;
+–muted: #3a4455;
+–dim: #2a3040;
+}
+
+body { font-family: ‘IBM Plex Sans’, ‘Noto Sans SC’, -apple-system, BlinkMacSystemFont, ‘PingFang SC’, ‘Helvetica Neue’, sans-serif; color: var(–text); display: flex; flex-direction: column; }
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 3px; height: 3px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #1e2433; border-radius: 2px; }
+
+/* Animations */
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.2} }
+@keyframes blink  { 0%,100%{opacity:1} 50%{opacity:0} }
+@keyframes fadeUp { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:none} }
+@keyframes glow   { 0%,100%{opacity:0.6} 50%{opacity:1} }
+
+/* Top bar */
+#topbar {
+height: 48px; flex-shrink: 0;
+background: rgba(4,7,12,0.94);
+border-bottom: 1px solid var(–border);
+display: flex; align-items: center;
+padding: 0 14px; gap: 10px;
+backdrop-filter: blur(20px);
+z-index: 60;
+}
+
+.logo-box {
+width: 26px; height: 26px; border-radius: 7px;
+background: linear-gradient(135deg, #00d4ff, #00ff88);
+display: flex; align-items: center; justify-content: center;
+font-size: 13px; font-weight: 800; color: #000; flex-shrink: 0;
+}
+
+.logo-text { flex-shrink: 0; line-height: 1; }
+.logo-text .title { font-size: 12px; font-weight: 700; }
+.logo-text .sub   { font-size: 9px; color: var(–muted); letter-spacing: 0.8px; }
+
+.spacer { flex: 1; }
+
+.topbar-section {
+display: flex; align-items: center; gap: 6px;
+border-right: 1px solid var(–border); padding-right: 12px;
+}
+.topbar-label { font-size: 9px; color: var(–muted); letter-spacing: 0.5px; }
+
+select.top-select {
+background: #0d1117; border: 1px solid var(–border2); border-radius: 5px;
+padding: 3px 7px; font-size: 10px; cursor: pointer; color: var(–muted);
+font-family: inherit;
+}
+
+.bar-wrap { width: 70px; height: 3px; background: var(–border2); border-radius: 2px; overflow: hidden; }
+.bar-fill  { height: 100%; border-radius: 2px; transition: width 1s linear; }
+
+.mono { font-family: ‘DM Mono’, monospace; font-size: 9px; color: #445; }
+
+/* Pulse tag */
+.ptag {
+display: inline-flex; align-items: center; gap: 4px;
+border-radius: 4px; padding: 2px 7px; font-weight: 600;
+border-width: 1px; border-style: solid; white-space: nowrap;
+}
+.ptag-dot { width: 5px; height: 5px; border-radius: 50%; animation: pulse 1.5s infinite; }
+
+/* Toggle sidebar btn */
+.sidebar-toggle {
+background: #0d1117; border: 1px solid var(–border2); border-radius: 6px;
+color: #556; cursor: pointer; font-size: 12px; padding: 4px 9px;
+transition: all 0.2s; flex-shrink: 0;
+}
+.sidebar-toggle:hover { color: #aaa; border-color: #334; }
+
+/* Layout */
+#layout { display: flex; flex: 1; overflow: hidden; }
+
+/* Sidebar */
+#sidebar {
+width: 252px; flex-shrink: 0; overflow: hidden;
+transition: width 0.25s ease;
+border-right: 1px solid var(–border);
+background: #080c10;
+}
+#sidebar.collapsed { width: 0; border-right: none; }
+
+#sidebar-inner {
+width: 252px; height: 100%; overflow-y: auto;
+padding: 12px 12px 24px;
+display: flex; flex-direction: column; gap: 10px;
+}
+
+.panel {
+background: var(–surface); border: 1px solid var(–border);
+border-radius: 9px; padding: 11px;
+}
+.panel-label {
+font-size: 8px; color: var(–muted); letter-spacing: 1.5px;
+text-transform: uppercase; margin-bottom: 7px;
+}
+
+/* Category buttons */
+.cat-btn {
+display: flex; align-items: center; gap: 8px; width: 100%;
+background: transparent; border: 1px solid transparent;
+border-radius: 6px; padding: 6px 9px; cursor: pointer;
+color: #556; font-size: 11px; text-align: left; font-family: inherit;
+transition: all 0.15s; margin-bottom: 2px;
+}
+.cat-btn:hover { transform: translateX(2px); }
+.cat-btn.active { font-weight: 600; }
+.cat-btn .cat-icon { font-size: 14px; }
+.cat-btn .cat-dot { margin-left: auto; font-size: 7px; }
+
+/* Location chips */
+.loc-chips { display: flex; flex-wrap: wrap; gap: 4px; }
+.loc-chip {
+background: rgba(255,255,255,0.02); border: 1px solid var(–border2);
+border-radius: 5px; padding: 3px 8px; font-size: 10px;
+color: #556; cursor: pointer; transition: all 0.15s; font-family: inherit;
+}
+.loc-chip.active { font-weight: 500; }
+
+/* Report type buttons */
+.rtype-btn {
+display: flex; flex-direction: column; width: 100%;
+background: transparent; border: 1px solid transparent;
+border-radius: 6px; padding: 5px 8px; cursor: pointer;
+text-align: left; margin-bottom: 2px; transition: all 0.15s;
+font-family: inherit;
+}
+.rtype-btn .rl { font-size: 10px; color: #778; font-weight: 500; }
+.rtype-btn .rd { font-size: 8px; color: #334; margin-top: 1px; }
+.rtype-btn.active .rl { font-weight: 600; }
+
+/* Inputs */
+.inp-row { display: flex; gap: 5px; margin-bottom: 6px; }
+.inp {
+flex: 1; min-width: 0; background: #06090d; border: 1px solid var(–border2);
+border-radius: 5px; padding: 4px 6px; font-size: 9px; color: #aaa;
+font-family: inherit;
+}
+.inp::placeholder { color: #2a3040; }
+.inp:focus { outline: none; border-color: #334; }
+.sep { color: var(–dim); align-self: center; font-size: 9px; }
+
+select.filter-sel {
+width: 100%; background: #06090d; border: 1px solid var(–border2);
+border-radius: 5px; padding: 4px 6px; font-size: 9px; color: #aaa;
+font-family: inherit; cursor: pointer;
+}
+.filter-sublabel { font-size: 8px; color: var(–muted); margin-bottom: 5px; }
+
+textarea.custom-ta {
+width: 100%; background: #06090d; border: 1px solid var(–border2);
+border-radius: 5px; padding: 6px 7px; font-size: 10px; color: #aaa;
+resize: none; font-family: inherit; line-height: 1.6;
+}
+textarea.custom-ta::placeholder { color: #2a3040; }
+textarea.custom-ta:focus { outline: none; border-color: #334; }
+
+/* Buttons */
+.run-btn {
+width: 100%; padding: 11px 0; border-radius: 8px;
+cursor: pointer; font-size: 12px; font-weight: 700;
+font-family: inherit; transition: all 0.2s;
+display: flex; align-items: center; justify-content: center; gap: 7px;
+}
+.run-btn:not(:disabled):hover { filter: brightness(1.18); transform: translateY(-1px); box-shadow: 0 6px 24px rgba(0,0,0,0.5); }
+.run-btn:disabled { cursor: not-allowed; }
+
+.clear-btn {
+width: 100%; padding: 6px 0; background: transparent;
+border: 1px solid var(–border); border-radius: 7px;
+cursor: pointer; color: var(–muted); font-size: 10px;
+font-family: inherit; transition: all 0.2s;
+}
+.clear-btn:hover { color: #778; border-color: #334; }
+
+/* Main panel */
+#main { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0; }
+
+/* Metrics grid */
+#metrics-grid {
+flex-shrink: 0; display: grid;
+grid-template-columns: repeat(4, 1fr);
+gap: 7px; padding: 10px 12px 0;
+}
+
+.metric-card {
+background: rgba(255,255,255,0.03);
+border-radius: 10px; padding: 12px 16px;
+position: relative; overflow: hidden;
+border: 1px solid rgba(255,255,255,0.06);
+transition: border-color 0.5s, box-shadow 0.5s;
+}
+.metric-card .top-line {
+position: absolute; top: 0; left: 0; right: 0; height: 2px;
+}
+.metric-card .m-label { font-size: 9px; color: #555; margin-bottom: 4px; letter-spacing: 0.8px; }
+.metric-card .m-value {
+font-size: 19px; font-weight: 700;
+font-family: ‘DM Mono’, ‘Menlo’, ‘Monaco’, ‘Courier New’, monospace; color: #f0f0f0;
+transition: color 0.4s;
+}
+.metric-card .m-footer { display: flex; align-items: center; gap: 5px; margin-top: 3px; }
+.metric-card .m-change { font-size: 10px; }
+.metric-card .m-month  { font-size: 9px; color: #444; }
+.metric-card .m-badge  { font-size: 8px; animation: fadeUp 0.3s; }
+
+/* Tabs */
+#tab-bar {
+flex-shrink: 0; display: flex; align-items: center;
+border-bottom: 1px solid var(–border);
+margin: 8px 12px 0; padding-bottom: 0;
+}
+.tab-btn {
+background: none; border: none; padding: 6px 14px;
+color: var(–muted); font-size: 11px; cursor: pointer;
+border-bottom: 2px solid transparent; margin-bottom: -1px;
+font-weight: 400; transition: all 0.2s; font-family: inherit;
+}
+.tab-btn.active { font-weight: 600; }
+
+.loading-dots { display: flex; align-items: center; gap: 5px; padding-right: 6px; }
+.dot { width: 4px; height: 4px; border-radius: 50%; }
+.loading-label { font-size: 9px; color: var(–muted); }
+
+/* Chat area */
+#chat-wrap { flex: 1; overflow: hidden; display: flex; flex-direction: column; margin: 7px 12px 12px; }
+#chat-scroll { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding-right: 3px; }
+
+/* Empty state */
+#empty-state {
+flex: 1; display: flex; flex-direction: column;
+align-items: center; justify-content: center; padding: 40px;
+animation: fadeUp 0.5s;
+}
+.empty-icon { font-size: 52px; margin-bottom: 14px; }
+.empty-title { font-size: 14px; font-weight: 600; color: #334; margin-bottom: 7px; }
+.empty-desc { font-size: 11px; color: #2a3040; text-align: center; max-width: 380px; line-height: 1.9; }
+.empty-chips { display: flex; gap: 7px; margin-top: 18px; flex-wrap: wrap; justify-content: center; }
+.empty-chip { background: #0a0e14; border: 1px solid var(–border); border-radius: 20px; padding: 3px 11px; font-size: 9px; color: var(–muted); }
+
+/* Messages */
+.msg-in { animation: fadeUp 0.25s ease; }
+
+.msg-user-wrap { display: flex; justify-content: flex-end; }
+.msg-user {
+border-radius: 9px 9px 2px 9px; padding: 7px 12px;
+max-width: 60%; font-size: 11px; line-height: 1.5;
+}
+.msg-user-time { font-size: 8px; margin-top: 3px; text-align: right; opacity: 0.5; }
+
+.msg-error {
+background: rgba(255,71,71,0.07); border: 1px solid rgba(255,71,71,0.15);
+border-radius: 7px; padding: 7px 11px; font-size: 11px; color: #ff6b6b;
+}
+
+.msg-ai {
+background: rgba(255,255,255,0.02); border: 1px solid var(–border);
+border-radius: 2px 9px 9px 9px; padding: 11px 13px; max-width: 95%;
+}
+.msg-ai-header { display: flex; align-items: center; gap: 7px; margin-bottom: 8px; }
+.ai-badge {
+width: 16px; height: 16px; border-radius: 4px;
+display: flex; align-items: center; justify-content: center;
+font-size: 8px; font-weight: 800; color: #000; flex-shrink: 0;
+}
+.ai-time { font-size: 9px; color: var(–muted); }
+.msg-ai-body { font-size: 11px; color: #888; line-height: 1.75; }
+.msg-ai-body h2 { font-size: 13px; margin: 13px 0 6px; padding-bottom: 4px; }
+.msg-ai-body h3 { font-size: 11px; color: #bbb; margin: 9px 0 4px; font-weight: 600; }
+.msg-ai-body .item { display: flex; gap: 6px; margin-bottom: 3px; font-size: 11px; color: #888; }
+.msg-ai-body .item .arrow { flex-shrink: 0; }
+.msg-ai-body p  { font-size: 11px; color: #888; margin: 2px 0; }
+.msg-ai-body .spacer-line { height: 4px; }
+
+/* Typing cursor */
+.cursor-blink { animation: blink 0.8s infinite; color: #00d4ff; }
+
+/* History */
+#hist-wrap { flex: 1; overflow-y: auto; margin: 7px 12px 12px; display: flex; flex-direction: column; gap: 7px; }
+.hist-row {
+background: rgba(255,255,255,0.02); border: 1px solid var(–border);
+border-radius: 9px; padding: 10px 13px; cursor: pointer; transition: border-color 0.2s;
+}
+.hist-row:hover { border-color: rgba(255,255,255,0.15); }
+.hist-top { display: flex; justify-content: space-between; margin-bottom: 4px; align-items: center; }
+.hist-meta { display: flex; gap: 6px; align-items: center; }
+.hist-time { font-size: 9px; color: var(–dim); }
+.hist-preview { font-size: 10px; color: #445; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.empty-hist { flex: 1; display: flex; align-items: center; justify-content: center; color: #334; font-size: 12px; }
+
+/* API key prompt overlay */
+#api-overlay {
+position: fixed; inset: 0; background: rgba(6,10,14,0.96);
+display: flex; align-items: center; justify-content: center;
+z-index: 200; backdrop-filter: blur(10px);
+}
+#api-box {
+background: #0a0e14; border: 1px solid #1a2030;
+border-radius: 14px; padding: 32px; width: 420px; max-width: 90vw;
+}
+#api-box .ab-logo { font-size: 36px; margin-bottom: 12px; text-align: center; }
+#api-box .ab-title { font-size: 16px; font-weight: 700; text-align: center; margin-bottom: 6px; }
+#api-box .ab-sub { font-size: 11px; color: #445; text-align: center; line-height: 1.7; margin-bottom: 20px; }
+#api-box .ab-label { font-size: 9px; color: var(–muted); letter-spacing: 1px; margin-bottom: 6px; }
+#api-key-input {
+width: 100%; background: #06090d; border: 1px solid #1a2030;
+border-radius: 7px; padding: 10px 12px; font-size: 12px; color: #aaa;
+font-family: ‘DM Mono’, monospace; margin-bottom: 10px;
+}
+#api-key-input::placeholder { color: #2a3040; }
+#api-key-input:focus { outline: none; border-color: #334; }
+#api-submit {
+width: 100%; padding: 12px; background: linear-gradient(135deg, #00d4ff, #00ff88);
+border: none; border-radius: 8px; cursor: pointer; font-size: 13px;
+font-weight: 700; font-family: inherit; color: #000; transition: all 0.2s;
+}
+#api-submit:hover { filter: brightness(1.1); transform: translateY(-1px); }
+#api-note { font-size: 9px; color: #334; text-align: center; margin-top: 10px; line-height: 1.6; }
+#api-error { font-size: 10px; color: #ff6b6b; text-align: center; margin-top: 6px; display: none; }
+</style>
+
+</head>
+<body>
+
+<!-- API Key Overlay -->
+
+<div id="api-overlay">
+  <div id="api-box">
+    <div class="ab-logo">🏙️</div>
+    <div class="ab-title">CA Real Estate Intelligence</div>
+    <div class="ab-sub">加州房地产实时信息 Agent Platform<br>请输入您的 Anthropic API Key 开始使用</div>
+    <div class="ab-label">ANTHROPIC API KEY</div>
+    <input id="api-key-input" type="password" placeholder="sk-ant-api03-..." autocomplete="off" />
+    <button id="api-submit" onclick="submitApiKey()">🔑 确认并进入平台</button>
+    <div id="api-error">API Key 格式无效，请检查后重新输入</div>
+    <div class="ab-note" id="api-note">Key 仅存储于本地浏览器，不会上传至任何服务器<br>获取 Key：<a href="https://console.anthropic.com" target="_blank" style="color:#00d4ff">console.anthropic.com</a></div>
+  </div>
+</div>
+
+<!-- Top Bar -->
+
+<div id="topbar">
+  <button class="sidebar-toggle" id="toggle-btn" onclick="toggleSidebar()">◀</button>
+  <div class="logo-box">地</div>
+  <div class="logo-text">
+    <div class="title">CA Real Estate Intelligence</div>
+    <div class="sub">加州房地产实时信息 Agent Platform</div>
+  </div>
+  <div class="spacer"></div>
+
+  <!-- Auto report -->
+
+  <div class="topbar-section">
+    <span class="topbar-label">自动报告</span>
+    <select class="top-select" id="auto-sel" onchange="setAutoInterval()" style="color:var(--muted)">
+      <option value="0">关闭</option>
+      <option value="300">5分钟</option>
+      <option value="900">15分钟</option>
+      <option value="1800">30分钟</option>
+      <option value="3600">1小时</option>
+    </select>
+    <div id="auto-bar-wrap" class="bar-wrap" style="display:none"><div id="auto-bar" class="bar-fill" style="background:#a855f7;width:100%"></div></div>
+    <span id="auto-timer-label" class="mono" style="display:none">--:--</span>
+  </div>
+
+  <!-- Metric refresh -->
+
+  <div class="topbar-section">
+    <span class="topbar-label">指标刷新</span>
+    <div class="bar-wrap"><div id="metric-bar" class="bar-fill" style="background:#00ff88;width:100%"></div></div>
+    <span id="metric-timer-label" class="mono">30s</span>
+    <span id="last-refresh-label" class="mono"></span>
+  </div>
+
+  <span class="ptag" style="background:rgba(0,255,136,0.08);border-color:rgba(0,255,136,0.2);color:#00ff88;font-size:9px">
+    <span class="ptag-dot" style="background:#00ff88;box-shadow:0 0 5px #00ff88"></span>LIVE
+  </span>
+  <span class="ptag" style="background:rgba(0,212,255,0.08);border-color:rgba(0,212,255,0.2);color:#00d4ff;font-size:9px">
+    <span class="ptag-dot" style="background:#00d4ff;box-shadow:0 0 5px #00d4ff"></span>AI驱动
+  </span>
+</div>
+
+<!-- Layout -->
+
+<div id="layout">
+
+  <!-- Sidebar -->
+
+  <div id="sidebar">
+    <div id="sidebar-inner">
+
+```
+  <!-- Category -->
+  <div class="panel">
+    <div class="panel-label">市场类别</div>
+    <div id="cat-list"></div>
+  </div>
+
+  <!-- Location -->
+  <div class="panel">
+    <div class="panel-label">目标地区</div>
+    <div class="loc-chips" id="loc-chips"></div>
+  </div>
+
+  <!-- Report type -->
+  <div class="panel">
+    <div class="panel-label">报告类型</div>
+    <div id="rtype-list"></div>
+  </div>
+
+  <!-- Filters -->
+  <div class="panel">
+    <div class="panel-label">筛选条件</div>
+    <div class="inp-row">
+      <input class="inp" id="price-min" placeholder="最低(万$)" />
+      <span class="sep">—</span>
+      <input class="inp" id="price-max" placeholder="最高(万$)" />
+    </div>
+    <div id="land-filters" style="display:none">
+      <div class="filter-sublabel">面积（英亩）</div>
+      <div class="inp-row">
+        <input class="inp" id="acre-min" placeholder="最小" />
+        <span class="sep">—</span>
+        <input class="inp" id="acre-max" placeholder="最大" />
+      </div>
+      <select class="filter-sel" id="subtype-sel"></select>
+    </div>
+    <div id="prop-filter">
+      <select class="filter-sel" id="prop-sel">
+        <option>全部</option><option>独栋住宅</option><option>联排别墅</option>
+        <option>公寓</option><option>商业用地</option><option>办公楼</option>
+        <option>零售</option><option>工业</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- Custom -->
+  <div class="panel">
+    <div class="panel-label">补充需求</div>
+    <textarea class="custom-ta" id="custom-query" rows="3" placeholder="例：重点关注学区、Cap Rate >5%..."></textarea>
+  </div>
+
+  <!-- Run -->
+  <button class="run-btn" id="run-btn" onclick="runAgent()">🔍 启动市场分析</button>
+  <button class="clear-btn" id="clear-btn" style="display:none" onclick="clearMessages()">清空对话</button>
+</div>
+```
+
+  </div>
+
+  <!-- Main -->
+
+  <div id="main">
+
+```
+<!-- Metrics -->
+<div id="metrics-grid"></div>
+
+<!-- Tabs -->
+<div id="tab-bar">
+  <button class="tab-btn active" id="tab-agent" onclick="switchTab('agent')">🤖 Agent 对话</button>
+  <button class="tab-btn" id="tab-history" onclick="switchTab('history')">📁 历史报告</button>
+  <div class="spacer"></div>
+  <div class="loading-dots" id="loading-dots" style="display:none">
+    <div class="dot" id="d0" style="animation:pulse 1s 0s infinite"></div>
+    <div class="dot" id="d1" style="animation:pulse 1s 0.18s infinite"></div>
+    <div class="dot" id="d2" style="animation:pulse 1s 0.36s infinite"></div>
+    <span class="loading-label">正在搜索实时数据...</span>
+  </div>
+</div>
+
+<!-- Chat -->
+<div id="chat-wrap">
+  <div id="chat-scroll">
+    <div id="empty-state">
+      <div class="empty-icon" id="empty-icon">🏙️</div>
+      <div class="empty-title">加州房地产智能分析 Agent</div>
+      <div class="empty-desc">
+        选择左侧类别、地区和报告类型，点击
+        <span id="empty-color-text" style="color:var(--cat-color)">启动市场分析</span>。<br>
+        顶部可设置<span style="color:#a855f7">自动报告</span>定时推送，指标卡每
+        <span style="color:#00ff88">30秒</span>自动刷新。
+      </div>
+      <div class="empty-chips">
+        <span class="empty-chip">🏢 商业地产 Cap Rate</span>
+        <span class="empty-chip">🏡 尔湾豪宅市场</span>
+        <span class="empty-chip">🌾 中央谷地农场</span>
+        <span class="empty-chip">🌍 开发用地 Zoning</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- History -->
+<div id="hist-wrap" style="display:none">
+  <div class="empty-hist" id="hist-empty">暂无历史报告</div>
+</div>
+```
+
+  </div><!-- /main -->
+</div><!-- /layout -->
+
+<script>
+// ─── DATA ───────────────────────────────────────────────────────────────────
+const CATEGORIES = [
+  { id:'commercial',  label:'加州商业地产', icon:'🏢', color:'#00d4ff' },
+  { id:'residential', label:'南加州住宅',   icon:'🏡', color:'#00ff88' },
+  { id:'luxury',      label:'豪宅市场',     icon:'💎', color:'#ff6b35' },
+  { id:'investment',  label:'投资机会',     icon:'📈', color:'#a855f7' },
+  { id:'land',        label:'土地出售',     icon:'🌍', color:'#f59e0b' },
+  { id:'agriculture', label:'农业地产',     icon:'🌾', color:'#84cc16' },
+];
+const LOCATIONS = {
+  commercial:  ['洛杉矶','旧金山','圣地亚哥','奥兰治县','硅谷','萨克拉门托'],
+  residential: ['尔湾','纽波特海滩','洛杉矶','圣地亚哥','帕萨迪纳','托斯汀'],
+  luxury:      ['贝弗利山','马里布','拉古纳海滩','科罗纳德马尔','圣马力诺'],
+  investment:  ['商业中心','工业园区','混合用途','公寓楼','零售物业'],
+  land:        ['内陆帝国','圣贝纳迪诺县','河滨县','圣地亚哥东部','洛杉矶县','文图拉县'],
+  agriculture: ['中央谷地','圣华金谷','科切拉谷','纳帕谷','索诺玛','蒙特雷县','弗雷斯诺'],
+};
+const LAND_SUBTYPES = ['全部','住宅开发用地','商业开发用地','工业用地','混合用途地块','山地/景观地','滨水地块','农转非用地'];
+const AGRI_SUBTYPES = ['全部','葡萄园','果园','蔬菜农场','牧场/牛场','坚果农场','花卉农场','有机农场','休闲农庄'];
+const REPORT_TYPES = [
+  { id:'market_overview',   label:'市场概览',   desc:'整体市场趋势与数据' },
+  { id:'price_analysis',    label:'价格分析',   desc:'最新成交价与挂牌价对比' },
+  { id:'hot_listings',      label:'热门房源',   desc:'近期上市与成交案例' },
+  { id:'investment_report', label:'投资报告',   desc:'收益率、Cap Rate分析' },
+  { id:'neighborhood',      label:'社区分析',   desc:'学区、配套设施评估' },
+  { id:'forecast',          label:'市场预测',   desc:'未来3-6个月走势预测' },
+  { id:'land_zoning',       label:'土地分区规划', desc:'Zoning、用途许可与开发潜力' },
+  { id:'agri_yield',        label:'农业产能分析', desc:'作物产量、土壤与水源评估' },
+];
+const METRICS = {
+  default: [
+    { label:'加州中位房价',   base:865,  unit:'K',   prefix:'$', change:3.2,  color:'#00d4ff' },
+    { label:'OC住宅均价',    base:1280, unit:'K',   prefix:'$', change:1.8,  color:'#00ff88' },
+    { label:'库存月数',       base:2.4,  unit:'个月', prefix:'',  change:-8,   color:'#ff6b35' },
+    { label:'LA商业空置率',  base:18.3, unit:'%',   prefix:'',  change:2.1,  color:'#a855f7' },
+  ],
+  land: [
+    { label:'加州土地均价/英亩', base:28,   unit:'K',  prefix:'$', change:5.4,  color:'#f59e0b' },
+    { label:'开发用地库存',      base:4820, unit:'块', prefix:'',  change:-3.1, color:'#00d4ff' },
+    { label:'南加州土地成交量',  base:12,   unit:'%',  prefix:'+', change:12,   color:'#00ff88' },
+    { label:'平均在市天数',      base:94,   unit:'天', prefix:'',  change:-8,   color:'#ff6b35' },
+  ],
+  agriculture: [
+    { label:'中央谷地均价/英亩', base:12.5, unit:'K',  prefix:'$', change:4.2,  color:'#84cc16' },
+    { label:'葡萄园均价/英亩',   base:85,   unit:'K',  prefix:'$', change:2.8,  color:'#f59e0b' },
+    { label:'农地成交宗数',      base:1240, unit:'',   prefix:'',  change:6.5,  color:'#00ff88' },
+    { label:'水权溢价',          base:35,   unit:'%',  prefix:'+', change:35,   color:'#00d4ff' },
+  ],
+};
+
+// ─── STATE ───────────────────────────────────────────────────────────────────
+let apiKey = '';
+let category = 'residential';
+let location = '尔湾';
+let reportType = 'market_overview';
+let isLoading = false;
+let currentTab = 'agent';
+let collapsed = false;
+let historyItems = [];
+let messages = [];
+
+// Metric live values
+let liveVals = [];
+let prevVals = [];
+let metricSec = 30;
+let metricTimerID = null;
+
+// Auto report
+let autoSec = 0;
+let autoTotal = 0;
+let autoTimerID = null;
+let autoCountID = null;
+
+// Typing animation
+let typingInterval = null;
+
+// ─── INIT ────────────────────────────────────────────────────────────────────
+function init() {
+  renderCategoryList();
+  renderLocationChips();
+  renderReportTypes();
+  renderMetrics();
+  resetMetricVals();
+  startMetricTimer();
+  applyTheme();
+}
+
+// ─── API KEY ─────────────────────────────────────────────────────────────────
+function submitApiKey() {
+  const val = document.getElementById('api-key-input').value.trim();
+  if (!val.startsWith('sk-ant-')) {
+    document.getElementById('api-error').style.display = 'block';
+    return;
+  }
+  apiKey = val;
+  document.getElementById('api-overlay').style.display = 'none';
+}
+
+// ─── THEME ────────────────────────────────────────────────────────────────────
+function getCat() { return CATEGORIES.find(c => c.id === category); }
+
+function applyTheme() {
+  const cat = getCat();
+  document.documentElement.style.setProperty('--cat-color', cat.color);
+  // Empty state color span
+  const el = document.getElementById('empty-color-text');
+  if (el) el.style.color = cat.color;
+  // empty icon filter
+  const icon = document.getElementById('empty-icon');
+  if (icon) icon.style.filter = `drop-shadow(0 0 16px ${cat.color}44)`;
+  // Tab active color
+  document.getElementById('tab-agent').style.color = currentTab === 'agent' ? cat.color : '';
+  document.getElementById('tab-agent').style.borderBottomColor = currentTab === 'agent' ? cat.color : 'transparent';
+  document.getElementById('tab-history').style.color = currentTab === 'history' ? cat.color : '';
+  document.getElementById('tab-history').style.borderBottomColor = currentTab === 'history' ? cat.color : 'transparent';
+  // Run btn
+  const rb = document.getElementById('run-btn');
+  if (!isLoading) {
+    rb.style.background = `linear-gradient(135deg, ${cat.color}, ${cat.color}cc)`;
+    rb.style.border = `1px solid ${cat.color}55`;
+    rb.style.color = '#000';
+  }
+  // Loading dots
+  for (let i=0;i<3;i++) { const d = document.getElementById('d'+i); if(d) d.style.background = cat.color; }
+  // Auto select color
+  const asel = document.getElementById('auto-sel');
+  if (autoTotal > 0) asel.style.color = cat.color;
+}
+
+// ─── SIDEBAR ─────────────────────────────────────────────────────────────────
+function toggleSidebar() {
+  collapsed = !collapsed;
+  document.getElementById('sidebar').classList.toggle('collapsed', collapsed);
+  document.getElementById('toggle-btn').textContent = collapsed ? '▶' : '◀';
+}
+
+// ─── CATEGORY ────────────────────────────────────────────────────────────────
+function renderCategoryList() {
+  const el = document.getElementById('cat-list');
+  el.innerHTML = CATEGORIES.map(c => `
+    <button class="cat-btn ${c.id===category?'active':''}" onclick="selectCategory('${c.id}')"
+      style="${c.id===category ? `background:${c.color}10;border-color:${c.color}70;color:${c.color}` : ''}">
+      <span class="cat-icon">${c.icon}</span>
+      <span>${c.label}</span>
+      ${c.id===category ? '<span class="cat-dot">●</span>' : ''}
+    </button>
+  `).join('');
+}
+
+function selectCategory(id) {
+  category = id;
+  const locs = LOCATIONS[id];
+  location = locs[0];
+  renderCategoryList();
+  renderLocationChips();
+  renderReportTypes();
+  renderFilters();
+  renderMetrics();
+  resetMetricVals();
+  applyTheme();
+}
+
+// ─── LOCATION ────────────────────────────────────────────────────────────────
+function renderLocationChips() {
+  const cat = getCat();
+  document.getElementById('loc-chips').innerHTML = LOCATIONS[category].map(loc => `
+    <button class="loc-chip ${loc===location?'active':''}" onclick="selectLocation('${loc}')"
+      style="${loc===location ? `background:${cat.color}15;border-color:${cat.color};color:${cat.color}` : ''}">
+      ${loc}
+    </button>
+  `).join('');
+}
+
+function selectLocation(loc) {
+  location = loc;
+  renderLocationChips();
+}
+
+// ─── REPORT TYPES ────────────────────────────────────────────────────────────
+function renderReportTypes() {
+  const cat = getCat();
+  document.getElementById('rtype-list').innerHTML = REPORT_TYPES.map(r => `
+    <button class="rtype-btn ${r.id===reportType?'active':''}" onclick="selectReportType('${r.id}')"
+      style="${r.id===reportType ? `background:${cat.color}0e;border-color:${cat.color}45` : ''}">
+      <span class="rl" style="color:${r.id===reportType ? cat.color : '#778'}">${r.label}</span>
+      <span class="rd">${r.desc}</span>
+    </button>
+  `).join('');
+}
+
+function selectReportType(id) {
+  reportType = id;
+  renderReportTypes();
+}
+
+// ─── FILTERS ────────────────────────────────────────────────────────────────
+function renderFilters() {
+  const isLandAgri = category === 'land' || category === 'agriculture';
+  document.getElementById('land-filters').style.display = isLandAgri ? 'block' : 'none';
+  document.getElementById('prop-filter').style.display = isLandAgri ? 'none' : 'block';
+  if (isLandAgri) {
+    const subtypes = category === 'land' ? LAND_SUBTYPES : AGRI_SUBTYPES;
+    document.getElementById('subtype-sel').innerHTML = subtypes.map(t => `<option>${t}</option>`).join('');
+  }
+}
+
+// ─── METRICS ────────────────────────────────────────────────────────────────
+function getMetricKey() {
+  return ['land','agriculture'].includes(category) ? category : 'default';
+}
+
+function resetMetricVals() {
+  const defs = METRICS[getMetricKey()];
+  liveVals = defs.map(m => m.base);
+  prevVals = defs.map(m => m.base);
+}
+
+function jitter(base) {
+  return +(base * (1 + (Math.random()-0.5)*0.025)).toFixed(base < 10 ? 2 : 0);
+}
+
+function renderMetrics(flash=false) {
+  const defs = METRICS[getMetricKey()];
+  const grid = document.getElementById('metrics-grid');
+  grid.innerHTML = defs.map((m,i) => {
+    const live = liveVals[i] !== undefined ? liveVals[i] : m.base;
+    const prev = prevVals[i] !== undefined ? prevVals[i] : m.base;
+    const updated = flash && live !== prev;
+    const up = m.change >= 0;
+    return `
+    <div class="metric-card" style="
+      border-color:${updated ? m.color+'55' : 'rgba(255,255,255,0.06)'};
+      box-shadow:${updated ? `0 0 12px ${m.color}18` : 'none'}">
+      <div class="top-line" style="background:linear-gradient(90deg,transparent,${m.color},transparent)"></div>
+      <div class="m-label">${m.label}</div>
+      <div class="m-value" style="color:${updated ? m.color : '#f0f0f0'}">${m.prefix}${live}${m.unit}</div>
+      <div class="m-footer">
+        <span class="m-change" style="color:${up?'#00ff88':'#ff4757'}">${up?'↑':'↓'}${Math.abs(m.change)}%</span>
+        <span class="m-month">较上月</span>
+        ${updated ? `<span class="m-badge" style="color:${m.color}">● 刷新</span>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ─── METRIC TIMER ────────────────────────────────────────────────────────────
+function startMetricTimer() {
+  if (metricTimerID) clearInterval(metricTimerID);
+  metricSec = 30;
+  metricTimerID = setInterval(() => {
+    metricSec--;
+    updateMetricBar();
+    if (metricSec <= 0) {
+      prevVals = [...liveVals];
+      const defs = METRICS[getMetricKey()];
+      liveVals = defs.map(m => jitter(m.base));
+      renderMetrics(true);
+      document.getElementById('last-refresh-label').textContent = new Date().toLocaleTimeString('zh-CN');
+      metricSec = 30;
+      setTimeout(() => renderMetrics(false), 2500);
+    }
+  }, 1000);
+}
+
+function updateMetricBar() {
+  document.getElementById('metric-bar').style.width = (metricSec / 30 * 100) + '%';
+  document.getElementById('metric-timer-label').textContent = metricSec + 's';
+}
+
+// ─── AUTO REPORT ─────────────────────────────────────────────────────────────
+function setAutoInterval() {
+  const val = parseInt(document.getElementById('auto-sel').value);
+  clearInterval(autoTimerID); clearInterval(autoCountID);
+  const barWrap = document.getElementById('auto-bar-wrap');
+  const timerLabel = document.getElementById('auto-timer-label');
+  if (!val) {
+    barWrap.style.display = 'none'; timerLabel.style.display = 'none'; autoTotal = 0;
+    document.getElementById('auto-sel').style.color = 'var(--muted)';
+    return;
+  }
+  autoTotal = val; autoSec = val;
+  barWrap.style.display = 'block'; timerLabel.style.display = 'inline';
+  document.getElementById('auto-bar').style.background = getCat().color;
+  document.getElementById('auto-sel').style.color = getCat().color;
+  updateAutoBar();
+  autoCountID = setInterval(() => { autoSec = Math.max(0, autoSec-1); updateAutoBar(); }, 1000);
+  autoTimerID = setInterval(() => { runAgent(); autoSec = autoTotal; }, val * 1000);
+}
+
+function updateAutoBar() {
+  document.getElementById('auto-bar').style.width = (autoTotal > 0 ? autoSec/autoTotal*100 : 0) + '%';
+  const m = Math.floor(autoSec/60), s = autoSec%60;
+  document.getElementById('auto-timer-label').textContent = m+':'+String(s).padStart(2,'0');
+}
+
+// ─── TABS ────────────────────────────────────────────────────────────────────
+function switchTab(tab) {
+  currentTab = tab;
+  document.getElementById('chat-wrap').style.display = tab === 'agent' ? 'flex' : 'none';
+  document.getElementById('hist-wrap').style.display = tab === 'history' ? 'flex' : 'none';
+  document.getElementById('tab-agent').classList.toggle('active', tab==='agent');
+  document.getElementById('tab-history').classList.toggle('active', tab==='history');
+  applyTheme();
+  if (tab === 'history') renderHistory();
+}
+
+// ─── MESSAGES ────────────────────────────────────────────────────────────────
+function clearMessages() {
+  messages = [];
+  if (typingInterval) clearInterval(typingInterval);
+  renderMessages();
+  document.getElementById('clear-btn').style.display = 'none';
+}
+
+function renderMessages() {
+  const cat = getCat();
+  const scroll = document.getElementById('chat-scroll');
+  const empty = document.getElementById('empty-state');
+  if (messages.length === 0) {
+    scroll.innerHTML = '';
+    scroll.appendChild(empty);
+    empty.style.display = 'flex';
+    return;
+  }
+  empty.style.display = 'none';
+  // Only re-render non-typing messages; typing is handled separately
+  const existing = scroll.querySelectorAll('.msg-in');
+  // Simple: rebuild all but last if typing
+  scroll.innerHTML = '';
+  messages.forEach((msg, i) => {
+    const div = document.createElement('div');
+    div.className = 'msg-in';
+    if (msg.role === 'user') {
+      div.innerHTML = `
+        <div class="msg-user-wrap">
+          <div class="msg-user" style="background:${cat.color}12;border:1px solid ${cat.color}30;color:${cat.color}">
+            ${escHtml(msg.content)}
+            <div class="msg-user-time">${msg.time}</div>
+          </div>
+        </div>`;
+    } else if (msg.role === 'error') {
+      div.innerHTML = `<div class="msg-error">⚠️ ${escHtml(msg.content)}</div>`;
+    } else {
+      const bodyHtml = i === messages.length-1 && msg.typing
+        ? `<span id="typing-span">${escHtml(msg.shown||'')}</span><span class="cursor-blink">▋</span>`
+        : fmtMarkdown(msg.content, cat.color);
+      div.innerHTML = `
+        <div class="msg-ai">
+          <div class="msg-ai-header">
+            <div class="ai-badge" style="background:linear-gradient(135deg,${cat.color},${cat.color}55)">${'AI'}</div>
+            <span class="ai-time">市场分析报告 · ${msg.time}</span>
+            ${msg.meta ? pulseTagHtml(msg.meta.location, cat.color, 9) : ''}
+            ${msg.auto ? pulseTagHtml('自动','#a855f7',8) : ''}
+          </div>
+          <div class="msg-ai-body" id="body-${i}">${bodyHtml}</div>
+        </div>`;
+    }
+    scroll.appendChild(div);
+  });
+  scroll.scrollTop = scroll.scrollHeight;
+}
+
+function pulseTagHtml(label, color, sz=9) {
+  return `<span class="ptag" style="background:${color}15;border-color:${color}35;color:${color};font-size:${sz}px">
+    <span class="ptag-dot" style="background:${color};box-shadow:0 0 5px ${color}"></span>${escHtml(label)}
+  </span>`;
+}
+
+function fmtMarkdown(text, color) {
+  return text.split('\n').map(line => {
+    if (line.startsWith('## ')) return `<h2 style="color:${color};border-bottom:1px solid ${color}25">${escHtml(line.slice(3))}</h2>`;
+    if (line.startsWith('### ')) return `<h3>${escHtml(line.slice(4))}</h3>`;
+    if (line.startsWith('- ')) return `<div class="item"><span class="arrow" style="color:${color}">›</span><span>${escHtml(line.slice(2))}</span></div>`;
+    if (/^\d+\./.test(line)) return `<p>${escHtml(line)}</p>`;
+    if (!line.trim()) return `<div class="spacer-line"></div>`;
+    return `<p>${escHtml(line)}</p>`;
+  }).join('');
+}
+
+function escHtml(str) {
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// ─── TYPING ANIMATION ────────────────────────────────────────────────────────
+function startTyping(msgIndex, fullText) {
+  if (typingInterval) clearInterval(typingInterval);
+  let i = 0;
+  const cat = getCat();
+  messages[msgIndex].shown = '';
+  messages[msgIndex].typing = true;
+  typingInterval = setInterval(() => {
+    if (i < fullText.length) {
+      i++;
+      messages[msgIndex].shown = fullText.slice(0, i);
+      const span = document.getElementById('typing-span');
+      if (span) span.innerHTML = escHtml(messages[msgIndex].shown);
+      const scroll = document.getElementById('chat-scroll');
+      scroll.scrollTop = scroll.scrollHeight;
+    } else {
+      clearInterval(typingInterval);
+      messages[msgIndex].typing = false;
+      // Re-render with full formatted content
+      const bodyEl = document.getElementById('body-' + msgIndex);
+      if (bodyEl) bodyEl.innerHTML = fmtMarkdown(fullText, cat.color);
+    }
+  }, 8);
+}
+
+// ─── HISTORY ────────────────────────────────────────────────────────────────
+function renderHistory() {
+  const cat = getCat();
+  const wrap = document.getElementById('hist-wrap');
+  const empty = document.getElementById('hist-empty');
+  if (historyItems.length === 0) { empty.style.display = 'flex'; return; }
+  empty.style.display = 'none';
+  // Clear existing rows
+  wrap.querySelectorAll('.hist-row').forEach(el => el.remove());
+  historyItems.forEach((msg, i) => {
+    const div = document.createElement('div');
+    div.className = 'hist-row';
+    div.innerHTML = `
+      <div class="hist-top">
+        <div class="hist-meta">
+          ${pulseTagHtml(msg.meta?.location||'?', cat.color, 9)}
+          <span style="font-size:9px;color:var(--muted)">${escHtml(msg.meta?.category||'')}</span>
+          ${msg.auto ? pulseTagHtml('自动','#a855f7',8) : ''}
+        </div>
+        <span class="hist-time">${msg.time}</span>
+      </div>
+      <div class="hist-preview">${escHtml(msg.content.slice(0,140))}...</div>`;
+    div.addEventListener('click', () => { messages = [msg]; renderMessages(); switchTab('agent'); });
+    div.addEventListener('mouseenter', () => div.style.borderColor = cat.color+'35');
+    div.addEventListener('mouseleave', () => div.style.borderColor = 'var(--border)');
+    wrap.appendChild(div);
+  });
+  document.getElementById('tab-history').textContent = `📁 历史报告 (${historyItems.length})`;
+}
+
+// ─── BUILD PROMPT ────────────────────────────────────────────────────────────
+function buildPrompt() {
+  const cat = getCat();
+  const rl = REPORT_TYPES.find(r => r.id===reportType)?.label;
+  const pMin = document.getElementById('price-min').value;
+  const pMax = document.getElementById('price-max').value;
+  const pr = pMin||pMax ? `价格区间：${pMin||'不限'}万 - ${pMax||'不限'}万美元，` : '';
+  const prop = document.getElementById('prop-sel').value;
+  const tf = prop!=='全部' ? `物业类型：${prop}，` : '';
+  const isLA = category==='land'||category==='agriculture';
+  const sub = isLA ? document.getElementById('subtype-sel')?.value : '';
+  const sf = isLA && sub && sub!=='全部' ? `细分类型：${sub}，` : '';
+  const aMin = isLA ? document.getElementById('acre-min').value : '';
+  const aMax = isLA ? document.getElementById('acre-max').value : '';
+  const ac = aMin||aMax ? `面积：${aMin||'不限'}-${aMax||'不限'}英亩，` : '';
+  const cq = document.getElementById('custom-query').value;
+  const custom = cq ? `\n补充需求：${cq}` : '';
+  const ls = category==='land' ? '\n### 土地开发潜力\n- Zoning分类与允许用途\n- 开发限制与环境要素（坡度、水源、消防）\n- 基础设施接入情况（水电、道路）\n- 近期类似地块成交案例' : '';
+  const as = category==='agriculture' ? '\n### 农业生产条件\n- 土壤质量与类型（Soil Class）\n- 水源保障（地下水权、灌溉渠道）\n- 作物适应性与历史产量\n- 农业补贴与税收优惠（Williamson Act等）' : '';
+  const inv = category==='land' ? '土地增值潜力、开发时间线、持有成本与退出策略'
+    : category==='agriculture' ? '农业回报率、租地/自营对比、土地增值与农业补贴'
+    : category==='commercial' ? 'Cap Rate范围、租金回报率、空置率分析'
+    : '租金收益潜力、增值空间、社区评级';
+  const today = new Date().toLocaleDateString('zh-CN');
+  return `你是专业的加州房地产市场分析师，精通商业地产、住宅、土地与农业地产。\n\n📍 类别：${cat.label} | 📌 地区：${location} | 📋 报告：${rl}\n${pr}${tf}${sf}${ac}${custom}\n\n请按结构提供报告（中文，专业详尽）：\n\n## 📊 市场快讯（${today}）\n\n### 核心数据\n- 当前中位价格与同比变化${isLA ? '\n- 每英亩均价与成交量' : ''}\n- 月度交易量与库存水平\n- 平均在市天数（DOM）\n- 挂牌价/成交价比率\n\n### 市场动态\n买卖双方力量对比、竞争程度、融资环境影响。\n${ls}${as}\n\n### 热点区域/项目\n列举3-5个值得关注的具体地区或地块，含价格、面积和特点。\n\n### 投资视角\n${inv}\n\n### 市场展望\n未来1-3个月走势预测，关键风险与机会。\n\n### 行动建议\n针对买家/投资者的3条可执行建议。\n\n请确保数据具体，分析深入，优先引用最新数据。`;
+}
+
+// ─── RUN AGENT ───────────────────────────────────────────────────────────────
+async function runAgent() {
+  if (isLoading || !apiKey) return;
+  isLoading = true;
+  switchTab('agent');
+
+  // Update run btn
+  const rb = document.getElementById('run-btn');
+  rb.disabled = true;
+  rb.style.background = '#0a0e14';
+  rb.style.border = '1px solid #1a2030';
+  rb.style.color = '#3a4455';
+  rb.innerHTML = '<span style="animation:pulse 0.9s infinite">⏳</span> 分析中...';
+  document.getElementById('loading-dots').style.display = 'flex';
+
+  const cat = getCat();
+  const rl = REPORT_TYPES.find(r => r.id===reportType)?.label;
+  const time = new Date().toLocaleTimeString('zh-CN');
+  const userMsg = {
+    role: 'user',
+    content: `🔍 ${cat.label} | ${location} | ${rl}`,
+    time
+  };
+  messages.push(userMsg);
+  renderMessages();
+  document.getElementById('clear-btn').style.display = 'block';
+
+  try {
+    const PROXY = 'https://portfolio-proxy.karenhj1991.workers.dev';
+    // Try direct first (works in Chrome), fall back to Cloudflare Worker proxy (Safari)
+    let endpoint = PROXY;
+    const res = await fetch(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1500,
+        tools: [{ type: 'web_search_20250305', name: 'web_search' }],
+        messages: [{ role: 'user', content: buildPrompt() }]
+      })
+    });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error.message);
+    const text = (data.content||[]).filter(b => b.type==='text').map(b => b.text).join('\n') || '未能获取市场数据，请稍后重试。';
+    const aMsg = { role:'assistant', content:text, time: new Date().toLocaleTimeString('zh-CN'), meta:{ category:cat.label, location, reportType }, auto: autoTotal>0, shown:'', typing:true };
+    messages.push(aMsg);
+    renderMessages();
+    startTyping(messages.length-1, text);
+    historyItems.unshift(aMsg);
+    if (historyItems.length > 20) historyItems.pop();
+  } catch(e) {
+    messages.push({ role:'error', content:'连接失败：' + (e.message||'请检查API Key和网络后重试。'), time: new Date().toLocaleTimeString('zh-CN') });
+    renderMessages();
+  }
+
+  isLoading = false;
+  rb.disabled = false;
+  rb.style.background = `linear-gradient(135deg, ${cat.color}, ${cat.color}cc)`;
+  rb.style.border = `1px solid ${cat.color}55`;
+  rb.style.color = '#000';
+  rb.textContent = '🔍 启动市场分析';
+  document.getElementById('loading-dots').style.display = 'none';
+}
+
+// ─── START ────────────────────────────────────────────────────────────────────
+window.addEventListener('load', () => {
+  init();
+  document.getElementById('last-refresh-label').textContent = new Date().toLocaleTimeString('zh-CN');
+  renderFilters();
+});
+</script>
+
+</body>
+</html>
