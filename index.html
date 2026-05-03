@@ -618,7 +618,7 @@ function init() {
 // ─── API KEY ─────────────────────────────────────────────────────────────────
 function submitApiKey() {
   const val = document.getElementById('api-key-input').value.trim();
-  if (!val.startsWith('sk-ant-')) {
+  if (!val) {
     document.getElementById('api-error').style.display = 'block';
     return;
   }
